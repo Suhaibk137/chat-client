@@ -1,12 +1,12 @@
 // Retrieve username from query parameters
 const params = new URLSearchParams(window.location.search);
-let username = params.get('username') || 'You';
+let username = params.get('username') || 'Anonymous';
 
-// Normalize username to 'You' or 'Me'
-username = username.toLowerCase() === 'me' ? 'Me' : 'You';
+// Trim whitespace from the username
+username = username.trim();
 
 // Connect to the Socket.IO server
-const socket = io();
+const socket = io('https://chat-server-3jus.onrender.com');
 
 // Select elements
 const chatForm = document.getElementById('chat-form');
@@ -40,19 +40,19 @@ chatForm.addEventListener('submit', (e) => {
         msgData.fileName = file.name;
         msgData.fileType = file.type;
 
-        // Display the message on sender's chat
-        displayMessage(msgData, 'sent');
-
         // Send the message to the server
         socket.emit('chat message', msgData);
+
+        // Display the message on sender's chat
+        displayMessage(msgData, 'sent');
       };
       reader.readAsDataURL(file);
     } else {
-      // Display the message on sender's chat
-      displayMessage(msgData, 'sent');
-
       // Send the message to the server
       socket.emit('chat message', msgData);
+
+      // Display the message on sender's chat
+      displayMessage(msgData, 'sent');
     }
 
     // Clear inputs
@@ -64,10 +64,11 @@ chatForm.addEventListener('submit', (e) => {
 
 // Receive messages from the server
 socket.on('chat message', (msgData) => {
-  // Display received messages
-  if (msgData.username !== username) {
-    displayMessage(msgData, 'received');
-  }
+  // Determine message type
+  const messageType = msgData.username === username ? 'sent' : 'received';
+
+  // Display the message
+  displayMessage(msgData, messageType);
 });
 
 // Listen for delete message events from the server
@@ -85,6 +86,14 @@ function displayMessage(msgData, type) {
 
   const contentElement = document.createElement('div');
   contentElement.classList.add('message-content');
+
+  // Display the sender's username for received messages
+  if (type === 'received') {
+    const senderElement = document.createElement('span');
+    senderElement.classList.add('message-sender');
+    senderElement.textContent = msgData.username;
+    contentElement.appendChild(senderElement);
+  }
 
   if (msgData.message) {
     const textElement = document.createElement('p');
